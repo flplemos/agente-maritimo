@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agente Marítimo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body data-theme="dark">
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="bg-grid"></div>
+
+  <main class="shell">
+    <section class="hero panel reveal">
+      <div class="hero-copy">
+        <span class="eyebrow">Surf Forecast AI</span>
+        <h1>Agente Marítimo</h1>
+        <p class="hero-text">
+          Previsão de swell, vento e marés para o litoral do Rio Grande do Norte com uma experiência moderna, rápida e responsiva.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Alternar tema">
+          <span class="theme-toggle__dot"></span>
+          <span class="theme-toggle__label">Dark Mode</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <aside class="side panel reveal">
+        <div class="side-scroll">
+          <h2>Consultas rápidas</h2>
+          <div class="suggestions">
+            <button class="chip" type="button">Como está o mar em Ponta Negra hoje?</button>
+            <button class="chip" type="button">Vai ter swell bom no RN no fim de semana?</button>
+            <button class="chip" type="button">Qual o melhor horário para surfar em Búzios amanhã?</button>
+            <button class="chip" type="button">Me fala de Pipa na sexta com foco em vento e maré.</button>
+          </div>
+
+          <div class="info-card">
+            <span class="info-card__label">Experiência</span>
+            <strong>UX futurista</strong>
+            <p>Dark mode, brilho atmosférico, respostas em tempo real e loading states elegantes.</p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="chat panel reveal reveal-delay">
+        <div class="chat-header">
+          <div>
+            <span class="status-dot"></span>
+            <span class="chat-status">Online</span>
+          </div>
+          <p id="statusText">Pronto para analisar o mar.</p>
+        </div>
+
+        <div id="messages" class="messages">
+          <div id="thinkingLog" class="thinking-log thinking-log--hidden" aria-live="polite">
+            <span class="thinking-log__pulse"></span>
+            <span id="thinkingText">Analisando swell, vento e maré...</span>
+          </div>
+          <article class="message message--assistant">
+            <div class="message__avatar">AM</div>
+            <div class="message__bubble">
+              <p>Fala comigo sobre swell, vento, maré ou melhores picos para surfar no RN.</p>
+            </div>
+          </article>
+        </div>
+
+        <form id="chatForm" class="composer">
+          <label class="sr-only" for="messageInput">Pergunta</label>
+          <textarea id="messageInput" name="message" rows="1" placeholder="Ex: Como vai estar Ponta Negra no sábado?" required></textarea>
+          <div class="composer-actions">
+            <span id="typingIndicator" class="typing typing--hidden">
+              <span></span><span></span><span></span>
+            </span>
+            <button id="sendButton" class="send-button" type="submit">Enviar</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

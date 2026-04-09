@@ -1,0 +1,8 @@
+langchain==0.2.16
+langchain-core==0.2.43
+langchain-openai>=0.1.20
+openai>=1.40.0
+python-dotenv>=1.0.1
+requests>=2.32.0
+geopy>=2.4.1
+flask>=3.0.0

@@ -16,6 +16,9 @@ from tools.geocoding import geocoding_tool
 from tools.tide_tool import tide_tool
 
 KNOWN_SPOTS = {
+    "rio doce": "Rio Doce, Búzios, Nísia Floresta, Rio Grande do Norte",
+    "rio doce buzios": "Rio Doce, Búzios, Nísia Floresta, Rio Grande do Norte",
+    "rio doce búzios": "Rio Doce, Búzios, Nísia Floresta, Rio Grande do Norte",
     "buzios": "Búzios, Nísia Floresta, Rio Grande do Norte",
     "búzios": "Búzios, Nísia Floresta, Rio Grande do Norte",
     "pipa": "Pipa, Tibau do Sul, Rio Grande do Norte",
@@ -140,21 +143,28 @@ class AgenteMaritimo:
                 "sexta",
             ]
         )
-        if re.search(r"\blitoral norte\b|\bnorte do rn\b|\bnorte do rio grande do norte\b", texto):
+
+        for chave, spot in KNOWN_SPOTS.items():
+            if chave in texto:
+                nome_regiao = spot
+                spots = [spot]
+                break
+
+        if not spots and re.search(r"\blitoral norte\b|\bnorte do rn\b|\bnorte do rio grande do norte\b", texto):
             nome_regiao = "Litoral Norte do RN"
             spots = [
                 "São Miguel do Gostoso, Rio Grande do Norte",
                 "Tourinhos, São Miguel do Gostoso, Rio Grande do Norte",
                 "Ponta do Santo Cristo, São Miguel do Gostoso, Rio Grande do Norte",
             ]
-        elif re.search(r"\blitoral sul\b|\bsul do rn\b|\bsul do rio grande do norte\b", texto):
+        elif not spots and re.search(r"\blitoral sul\b|\bsul do rn\b|\bsul do rio grande do norte\b", texto):
             nome_regiao = "Litoral Sul do RN"
             spots = [
                 "Pipa, Tibau do Sul, Rio Grande do Norte",
                 "Búzios, Nísia Floresta, Rio Grande do Norte",
                 "Barra de Tabatinga, Nísia Floresta, Rio Grande do Norte",
             ]
-        elif re.search(r"\brio grande do norte\b|\brn\b", texto) and any(
+        elif not spots and re.search(r"\brio grande do norte\b|\brn\b", texto) and any(
             chave in texto for chave in ["melhor pico", "onde surfar", "melhor lugar", "qual pico", "melhor praia"]
         ):
             nome_regiao = "Rio Grande do Norte"
@@ -163,18 +173,11 @@ class AgenteMaritimo:
                 "Pipa, Tibau do Sul, Rio Grande do Norte",
                 "São Miguel do Gostoso, Rio Grande do Norte",
             ]
-        elif re.search(r"\brio grande do norte\b|\brn\b", texto) and consulta_previsao:
+        elif not spots and re.search(r"\brio grande do norte\b|\brn\b", texto) and consulta_previsao:
             nome_regiao = "Rio Grande do Norte (referência costeira: Ponta Negra/Natal)"
             spots = [
                 "Ponta Negra, Natal, Rio Grande do Norte",
             ]
-
-        if not spots:
-            for chave, spot in KNOWN_SPOTS.items():
-                if chave in texto:
-                    nome_regiao = spot
-                    spots = [spot]
-                    break
 
         if not spots:
             return None
@@ -188,7 +191,11 @@ class AgenteMaritimo:
         def _rodar_consulta(spot: str, data: str):
             geo = geocoding_tool.invoke(spot)
             if not geo.get("sucesso"):
-                return None
+                return {
+                    "spot": spot,
+                    "data": data,
+                    "erro_geocoding": geo.get("erro") or "Não foi possível localizar esse ponto.",
+                }
             previsao = tide_tool.invoke({
                 "latitude": geo["latitude"],
                 "longitude": geo["longitude"],
@@ -211,6 +218,30 @@ class AgenteMaritimo:
                 resultado = future.result()
                 if resultado:
                     consultas.append(resultado)
+
+        consultas_validas = [item for item in consultas if "previsao" in item]
+        if not consultas_validas:
+            spots_falhos = ", ".join(item["spot"] for item in consultas) or (nome_regiao or "o local pedido")
+            return (
+                f"Não consegui localizar com segurança {spots_falhos} para consultar onda, vento e maré. "
+                "Pode me passar o nome da praia com cidade/estado ou um ponto de referência mais próximo?"
+            )
+
+        def _tem_dados_essenciais(previsao: dict) -> bool:
+            ondas = previsao.get("resumo_ondas", {}) or {}
+            vento = previsao.get("resumo_vento", {}) or {}
+            mares = previsao.get("tabua_de_mares", []) or []
+            tem_mares = any("não disponíveis" not in str(item).lower() and "erro" not in str(item).lower() for item in mares)
+            return bool(ondas.get("dados_disponiveis") or vento.get("dados_disponiveis") or tem_mares)
+
+        if not any(_tem_dados_essenciais(item["previsao"]) for item in consultas_validas):
+            spots_sem_dados = ", ".join(sorted({item["spot"] for item in consultas_validas}))
+            return (
+                f"Consegui localizar {spots_sem_dados}, mas não vieram dados suficientes de onda, vento ou maré para responder com segurança. "
+                "Quer tentar uma praia vizinha específica ou me mandar outro ponto de referência?"
+            )
+
+        consultas = consultas_validas
 
         if not consultas:
             return None
@@ -288,7 +319,8 @@ class AgenteMaritimo:
             "Se a pergunta pedir melhor pico, compare os spots consultados e diga qual parece mais promissor.\n"
             "Responda em no máximo 6 frases curtas.\n"
             "Se houver mais de uma data, compare brevemente.\n"
-            "Se o usuário mencionar um subpico específico, mas a consulta disponível tiver sido feita no pico-base mais próximo, deixe isso claro em uma frase curta.\n\n"
+            "Nunca troque uma praia específica por um pico-base ou referência costeira se houver coordenadas para o local pedido.\n"
+            "Se a praia ou localidade pedida estiver ambígua ou os dados essenciais não vierem na consulta, diga exatamente o que falta e peça a informação ao usuário.\n\n"
             f"Pergunta do usuário: {pergunta}\n"
             f"Região analisada: {nome_regiao or 'Consulta local'}\n"
             f"Dados consultados: {json.dumps(consultas_compactas, ensure_ascii=False)}\n"
